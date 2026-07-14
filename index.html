@@ -578,6 +578,22 @@ const D = {
   rec_how:{en:'How they are generated',es:'Cómo se generan',pt:'Como são gerados'},
   rec_howBody:{en:'We cross your real history in {ws}, your best content and current trends to prioritize by potential.',es:'Cruzamos tu histórico real de {ws}, tu mejor contenido y las tendencias actuales para priorizar por potencial.',pt:'Cruzamos seu histórico real em {ws}, seu melhor conteúdo e as tendências atuais para priorizar por potencial.'},
   rec_hook:{en:'Hook',es:'Hook',pt:'Hook'}, rec_genScript:{en:'Generate script',es:'Generar guion',pt:'Gerar roteiro'}, rec_savedIdea:{en:'Idea saved',es:'Idea guardada',pt:'Ideia salva'}, rec_updated:{en:'Recommendations updated',es:'Recomendaciones actualizadas',pt:'Recomendações atualizadas'},
+  // assistant answers
+  as_a_best:{en:'Your best post in {ws} is "<b>{title}</b>" ({plat}) with {views} views and {er}% engagement.',es:'Tu mejor publicación en {ws} es "<b>{title}</b>" ({plat}) con {views} views y {er}% de engagement.',pt:'Sua melhor publicação em {ws} é "<b>{title}</b>" ({plat}) com {views} views e {er}% de engajamento.'},
+  as_a_reachNone:{en:"There isn't enough previous data yet to compare reach.",es:'Aún no hay periodo previo suficiente para comparar el alcance.',pt:'Ainda não há período anterior suficiente para comparar o alcance.'},
+  as_a_reachUp:{en:'Your reach rose {n}% vs the previous period. Check Analytics by platform and format.',es:'Tu alcance subió {n}% vs el periodo anterior. Revisa Analytics por plataforma y formato.',pt:'Seu alcance subiu {n}% vs o período anterior. Veja Analytics por plataforma e formato.'},
+  as_a_reachDown:{en:'Your reach dropped {n}% vs the previous period. Check Analytics by platform and format.',es:'Tu alcance bajó {n}% vs el periodo anterior. Revisa Analytics por plataforma y formato.',pt:'Seu alcance caiu {n}% vs o período anterior. Veja Analytics por plataforma e formato.'},
+  as_a_compareSuffix:{en:' (based on your posts in this workspace).',es:' (según tus publicaciones de este workspace).',pt:' (com base nas suas publicações deste workspace).'},
+  as_a_today:{en:"I'd prioritize an AI-agent demo Reel (your winning format) and repurpose your latest tutorial into Shorts. Add it to the calendar?",es:'Priorizaría un Reel demo de un agente de IA (tu formato ganador) y reutilizar tu último tutorial en Shorts. ¿Lo añado al calendario?',pt:'Eu priorizaria um Reel demo de um agente de IA (seu formato vencedor) e reaproveitar seu último tutorial em Shorts. Adiciono ao calendário?'},
+  as_a_default:{en:'With {ws} data, lean on your highest-engagement format and the "AI agents" trend. Shall I turn it into a post?',es:'Con los datos de {ws}, apóyate en tu formato de mayor engagement y en la tendencia "Agentes de IA". ¿Lo convierto en una publicación?',pt:'Com os dados de {ws}, aposte no seu formato de maior engajamento e na tendência "Agentes de IA". Transformo em publicação?'},
+  // real workspace mode
+  se_mode:{en:'Workspace mode',es:'Modo de workspace',pt:'Modo de workspace'},
+  se_modeDemo:{en:'Sample data (demo)',es:'Datos de muestra (demo)',pt:'Dados de amostra (demo)'}, se_modeReal:{en:'Real workspace (your data)',es:'Workspace real (tus datos)',pt:'Workspace real (seus dados)'},
+  real_start:{en:'Start a real (empty) workspace',es:'Empezar un workspace real (vacío)',pt:'Começar um workspace real (vazio)'},
+  real_startTitle:{en:'Start a real workspace',es:'Empezar un workspace real',pt:'Começar um workspace real'},
+  real_startMsg:{en:'This clears the sample content so you can use the app with your own real data. Your connected accounts and brand stay. Continue?',es:'Esto borra el contenido de muestra para que uses la app con tus datos reales. Se mantienen tus cuentas conectadas y la marca. ¿Continuar?',pt:'Isso limpa o conteúdo de amostra para você usar o app com seus dados reais. Suas contas conectadas e a marca permanecem. Continuar?'},
+  real_done:{en:'Real workspace ready. Add your first post.',es:'Workspace real listo. Añade tu primera publicación.',pt:'Workspace real pronto. Adicione sua primeira publicação.'},
+  real_startModeSub:{en:'Switch off the demo and use the app for real.',es:'Desactiva el demo y usa la app de verdad.',pt:'Desative o demo e use o app de verdade.'},
 };
 function langBtn(){ return `<button type="button" class="btn btn-sm" onclick="langMenu()" title="${escapeAttr(t('language'))}" aria-label="${escapeAttr(t('language'))}">${ICON.globe}<span style="margin-left:3px;font-weight:700">${state.lang.toUpperCase()}</span></button>`; }
 function interp(s,vars){ if(!vars) return s; return s.replace(/\{(\w+)\}/g,(m,k)=> (k in vars)? vars[k] : m); }
@@ -947,7 +963,7 @@ function SEED_TRENDS(){ return [
 /* ============================ STATE ============================ */
 let DB = buildSeed();
 const state = {
-  screen:'landing', view:'overview', ws:'diwa', minimized:false, onbStep:0, lang:CONFIG.DEFAULT_LANG,
+  screen:'landing', view:'overview', ws:'diwa', minimized:false, onbStep:0, lang:CONFIG.DEFAULT_LANG, mode:'demo',
   analytics:{ period:'28d', platform:'all', account:'all', format:'all', topic:'all', objective:'all', status:'all' },
   compare:{ a:'ig', b:'tiktok', metric:'engagement', gran:'week' },
   calendar:{ cursorY:new Date().getFullYear(), cursorM:new Date().getMonth(), mode:'month', selDay:null },
@@ -965,7 +981,7 @@ const StorageService = {
     try{
       const payload = { version:CONFIG.SCHEMA_VERSION, savedAt:DateService.nowISO(),
         posts:DB.posts, accounts:DB.accounts, ws:state.ws,
-        ui:{ analytics:state.analytics, compare:state.compare, calendarMode:state.calendar.mode, settings:state.settings, lang:state.lang } };
+        ui:{ analytics:state.analytics, compare:state.compare, calendarMode:state.calendar.mode, settings:state.settings, lang:state.lang, mode:state.mode } };
       localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(payload));
     }catch(e){ console.warn('StorageService.save failed', e); }
   },
@@ -985,6 +1001,7 @@ const StorageService = {
       if(data.ui.calendarMode) state.calendar.mode = data.ui.calendarMode;
       if(data.ui.settings) Object.assign(state.settings, data.ui.settings);
       if(data.ui.lang && D.create[data.ui.lang]) state.lang=data.ui.lang;
+      if(data.ui.mode) state.mode=data.ui.mode;
     }
     return true;
   },
@@ -1281,7 +1298,8 @@ function confirmDialog(title,msg,onYes,danger){
   setTimeout(()=>{ const y=$('#confirmYes'); if(y) y.onclick=()=>{ closeModal(); onYes&&onYes(); }; },40);
 }
 function animateNums(scope){ (scope||document).querySelectorAll('[data-count]').forEach(e=>{ const target=+e.dataset.count; const suffix=e.dataset.suffix||''; const dur=800; const t0=performance.now(); const fmtIt=e.dataset.fmt==='k'; (function step(t){ const p=Math.min(1,(t-t0)/dur); const val=target*(1-Math.pow(1-p,3)); e.textContent=(fmtIt?fmt(Math.round(val)):Math.round(val).toLocaleString('es-ES'))+suffix; if(p<1)requestAnimationFrame(step); })(t0); }); }
-function demoTag(){ return `<span class="chip warn" title="${escapeAttr(t('demoData'))}">${ICON.alert}${t('demoData')}</span>`; }
+function demoTag(){ if(state.mode==='real') return ''; return `<span class="chip warn" title="${escapeAttr(t('demoData'))}">${ICON.alert}${t('demoData')}</span>`; }
+function startFreshConfirm(){ confirmDialog(t('real_startTitle'),t('real_startMsg'),()=>{ DB.posts=[]; DB.notifications=[]; state.mode='real'; StorageService.save(); state.screen='app'; state.view='overview'; render(); toast(t('real_done'),'red'); }, false); }
 const simBanner = (txt) => `<span class="sim-banner">${ICON.alert}${escapeHTML(txt||'Simulación local — sin conexión real a redes')}</span>`;
 
 /* ============================ NAV / ROUTER ============================ */
@@ -1400,13 +1418,14 @@ function cmdFilter(){ const q=($('#cmdi')?.value||'').toLowerCase(); const r=win
 /* assistant */
 const ASST_Q=()=>[t('as_q1'),t('as_q2'),t('as_q3'),t('as_q4')];
 function asstAnswer(q){
+  q=(q||'').toLowerCase();
   const posts=wsPosts().filter(p=>p.status==='published');
   const best=posts.slice().sort((a,b)=>b.metrics.views-a.metrics.views)[0];
-  if(/mejor/.test(q) && best) return `Tu mejor publicación en ${escapeHTML(ws().name)} es "<b>${escapeHTML(best.title)}</b>" (${platName(best.platforms[0])}) con ${fmt(best.metrics.views)} views y ${best.metrics.engagementRate}% de engagement.`;
-  if(/alcance/.test(q)){ const s=AnalyticsService.summaryWithDelta(Object.assign({workspaceId:state.ws},state.analytics)); const d=s.delta('reach'); return d==null?'Aún no hay periodo previo suficiente para comparar el alcance.':`Tu alcance ${d>=0?'subió':'bajó'} ${Math.abs(d)}% vs el periodo anterior. Revisa Analytics para ver por plataforma y formato.`; }
-  if(/compara/.test(q)){ const c=AnalyticsService.compare('ig','tiktok','views','week', state.analytics.period); return c.conclusion+' (según tus publicaciones de este workspace).'; }
-  if(/publicar hoy/.test(q)) return 'Priorizaría un Reel demo de un agente de IA (tu formato ganador) y reutilizar tu último tutorial en Shorts. ¿Lo creo en el calendario?';
-  return `Con los datos de ${escapeHTML(ws().name)}, apóyate en tu formato de mayor engagement y en la tendencia "Agentes de IA". ¿Lo convierto en una publicación?`;
+  if(/best|mejor|melhor|video|vídeo|vídeo/.test(q) && best) return t('as_a_best',{ws:escapeHTML(ws().name),title:escapeHTML(best.title),plat:platName(best.platforms[0]),views:fmt(best.metrics.views),er:best.metrics.engagementRate});
+  if(/reach|alcance/.test(q)){ const s=AnalyticsService.summaryWithDelta(Object.assign({workspaceId:state.ws},state.analytics)); const d=s.delta('reach'); return d==null?t('as_a_reachNone'):(d>=0?t('as_a_reachUp',{n:Math.abs(d)}):t('as_a_reachDown',{n:Math.abs(d)})); }
+  if(/compare|compara/.test(q)){ const c=AnalyticsService.compare('ig','tiktok','views','week', state.analytics.period); return c.conclusion+t('as_a_compareSuffix'); }
+  if(/today|hoy|hoje/.test(q)) return t('as_a_today');
+  return t('as_a_default',{ws:escapeHTML(ws().name)});
 }
 function mountAssistant(){ const p=$('#asst'); if(!p) return; p.innerHTML=`
   <div class="asst-head"><div class="platform-ico" style="background:linear-gradient(135deg,var(--red),var(--crimson))">${ICON.spark}</div><div style="flex:1"><b style="font-size:14px">Do it AI Strategist</b><div class="mut3" style="font-size:11px">${escapeHTML(t('as_dataOf',{ws:ws().name}))}</div></div><button type="button" class="btn btn-sm btn-icon" onclick="toggleAsst()" aria-label="${escapeAttr(t('cancel'))}">${ICON.x}</button></div>
@@ -2047,6 +2066,13 @@ function viewSettings(){
       <div class="field"><label for="se-email">${t('se_email')}</label><input id="se-email" value="doitwithai4@gmail.com"></div>
       <div class="field"><label for="se-lang">${t('language')}</label><select id="se-lang" onchange="setLang(this.value)">${LANGS.map(l=>`<option value="${l[0]}" ${l[0]===state.lang?'selected':''}>${l[1]}</option>`).join('')}</select></div>
     </div>
+    <div class="card card-pad"><div class="section-title mb8">${t('se_mode')}</div>
+      <div class="glass" style="padding:14px;margin-bottom:12px"><div class="flex ac jb"><div><span class="tag">${t('se_mode')}</span><div style="font-size:15px;font-weight:700;font-family:'Sora';margin-top:4px">${state.mode==='real'?t('se_modeReal'):t('se_modeDemo')}</div></div><span class="chip ${state.mode==='real'?'good':'warn'}">${state.mode==='real'?'REAL':'DEMO'}</span></div></div>
+      <p class="muted" style="font-size:12.5px;margin-bottom:12px">${t('real_startModeSub')}</p>
+      ${state.mode==='real'
+        ? `<button type="button" class="btn btn-sm" onclick="resetDemoConfirm()">${ICON.refresh}${t('se_resetDemo')}</button>`
+        : `<button type="button" class="btn btn-sm btn-primary" onclick="startFreshConfirm()">${ICON.bolt}${t('real_start')}</button>`}
+    </div>
     <div class="card card-pad"><div class="section-title mb8">${t('se_localData')}</div>
       <p class="muted" style="font-size:12.5px;margin-bottom:12px">${escapeHTML(t('se_localDataDesc',{v:CONFIG.SCHEMA_VERSION}))}</p>
       <button type="button" class="btn btn-sm" onclick="StorageService.save();toast(t('toast_saved'))">${ICON.save}${t('guardar_ahora')}</button>
@@ -2063,7 +2089,7 @@ function viewSettings(){
     </div>
   </div>`;
 }
-function resetDemoConfirm(){ confirmDialog(t('se_resetTitle'),t('se_resetMsg'),()=>{ StorageService.reset(); state.screen='app'; state.view='overview'; render(); toast(t('se_resetDone'),'red'); }, true); }
+function resetDemoConfirm(){ confirmDialog(t('se_resetTitle'),t('se_resetMsg'),()=>{ StorageService.reset(); state.mode='demo'; StorageService.save(); state.screen='app'; state.view='overview'; render(); toast(t('se_resetDone'),'red'); }, true); }
 
 /* ============================ INIT ============================ */
 function boot(){
